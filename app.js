@@ -692,31 +692,65 @@ async function clearAllBookings() {
 }
 
 function exportToCSV() {
-    if (currentBookings.length === 0) {
-        alert('No bookings to export.');
-        return;
-    }
+    // Create weekly grid format CSV
+    const weekDates = getWeekDates();
 
-    // Create CSV content
-    const headers = ['Date', 'Time', 'Teacher Name', 'Notes'];
-    const rows = currentBookings.map(b => [
-        b.date,
-        formatTime(b.hour, b.minute || 0),
-        b.teacherName,
-        b.notes || ''
-    ]);
-
-    let csv = headers.join(',') + '\n';
-    rows.forEach(row => {
-        csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+    // Build header row: Time, Sunday, Monday, ..., Saturday
+    const headers = ['Time'];
+    weekDates.forEach((date, dayIndex) => {
+        const dayName = APP_CONFIG.daysOfWeek[dayIndex];
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+        headers.push(`${dayName} (${dateStr})`);
     });
 
+    let csv = headers.join(',') + '\n';
+
+    // Generate time slots
+    const totalMinutes = (scheduleEndHour - scheduleStartHour) * 60;
+    const slotCount = totalMinutes / APP_CONFIG.slotDurationMinutes;
+
+    for (let i = 0; i < slotCount; i++) {
+        const minutes = scheduleStartHour * 60 + (i * APP_CONFIG.slotDurationMinutes);
+        const hour = Math.floor(minutes / 60);
+        const minute = minutes % 60;
+
+        // Start row with time label
+        const row = [formatTime(hour, minute)];
+
+        // Add booking info for each day of the week
+        weekDates.forEach((date) => {
+            const dateStr = formatDateISO(date);
+            const slotId = `${dateStr}_${hour}_${minute}`;
+
+            // Find booking for this slot
+            const booking = currentBookings.find(b => b.timeslot === slotId);
+
+            if (booking) {
+                // Add teacher name (and notes if available)
+                const cellContent = booking.notes
+                    ? `${booking.teacherName} (${booking.notes})`
+                    : booking.teacherName;
+                row.push(`"${cellContent}"`);
+            } else {
+                // Empty slot
+                row.push('');
+            }
+        });
+
+        csv += row.join(',') + '\n';
+    }
+
     // Download
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `timeslot-bookings-${new Date().toISOString().split('T')[0]}.csv`;
+
+    // Include week range in filename
+    const weekStart = formatDateISO(weekDates[0]);
+    const weekEnd = formatDateISO(weekDates[6]);
+    a.download = `timeslot-weekly-${weekStart}_to_${weekEnd}.csv`;
+
     a.click();
     window.URL.revokeObjectURL(url);
 }
