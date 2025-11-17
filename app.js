@@ -361,6 +361,18 @@ function openBookingModal(booking = null) {
     // Always set teacher name to current user (locked field)
     document.getElementById('teacherName').value = currentUserName;
 
+    // Display slot date/time information
+    if (selectedSlot) {
+        const slotDate = new Date(selectedSlot.date);
+        const dayOfWeek = APP_CONFIG.daysOfWeek[selectedSlot.dayIndex];
+        const monthDay = `${slotDate.getMonth() + 1}/${slotDate.getDate()}`;
+        const timeStr = formatTime(selectedSlot.hour, selectedSlot.minute);
+
+        document.getElementById('slotInfo').innerHTML = `
+            <strong>${dayOfWeek}, ${monthDay}</strong> at <strong>${timeStr}</strong>
+        `;
+    }
+
     if (booking) {
         // Edit mode
         document.getElementById('modalTitle').textContent = 'Edit Booking';
