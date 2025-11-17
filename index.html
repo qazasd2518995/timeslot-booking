@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#116dff">
+    <title>Teacher Timeslot Booking System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal show">
+        <div class="modal-content">
+            <h2>Welcome to Timeslot Booking System</h2>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">Please enter your name to continue</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginName">Your Name *</label>
+                    <input type="text" id="loginName" required maxlength="100" placeholder="Enter your name" autofocus>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <header>
+            <h1>Teacher Timeslot Booking System</h1>
+            <p class="subtitle">Click on any available timeslot to book your class</p>
+            <div class="user-info">
+                <span>Logged in as: <strong id="currentUserDisplay"></strong></span>
+                <button class="btn-secondary btn-sm" id="logoutBtn">Logout</button>
+            </div>
+        </header>
+
+        <div class="controls">
+            <div class="week-selector">
+                <label>Week:</label>
+                <button id="prevWeekBtn" class="btn-secondary btn-sm">← Previous</button>
+                <span id="weekDisplay" style="margin: 0 15px; font-weight: 600;"></span>
+                <button id="nextWeekBtn" class="btn-secondary btn-sm">Next →</button>
+                <button id="todayBtn" class="btn-primary btn-sm" style="margin-left: 10px;">Today</button>
+            </div>
+            <div class="filters">
+                <input type="text" id="searchInput" placeholder="Search by teacher name...">
+                <button id="refreshBtn" class="btn-secondary">Refresh</button>
+                <button id="adminBtn" class="btn-admin">Admin Panel</button>
+            </div>
+        </div>
+
+        <div class="legend">
+            <span class="legend-item"><span class="dot available"></span> Available (Click to book)</span>
+            <span class="legend-item"><span class="dot my-booking"></span> My Bookings (Click to edit)</span>
+            <span class="legend-item"><span class="dot booked"></span> Others' Bookings (Read-only)</span>
+        </div>
+
+        <div id="loadingIndicator" class="loading">Loading schedule...</div>
+        <div id="errorMessage" class="error-message"></div>
+
+        <div class="schedule-container">
+            <div class="schedule-grid" id="scheduleGrid">
+                <!-- Timeslots will be generated here -->
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalSlots">0</h3>
+                <p>Total Slots</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="bookedSlots">0</h3>
+                <p>Booked</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="availableSlots">0</h3>
+                <p>Available</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Book Timeslot</h2>
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label for="teacherName">Teacher Name *</label>
+                    <input type="text" id="teacherName" required maxlength="100" readonly>
+                    <small style="color: var(--text-secondary); font-size: 0.85rem;">Your name is locked. Only you can edit/delete your bookings.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes / Remarks</label>
+                    <textarea id="notes" rows="4" maxlength="500" placeholder="Any additional information..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary" id="submitBtn">Book Timeslot</button>
+                    <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+                    <button type="button" class="btn-danger" id="deleteBtn" style="display:none;">Delete Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLoginModal" class="modal">
+        <div class="modal-content">
+            <span class="close admin-login-close">&times;</span>
+            <h2>Admin Login</h2>
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label for="adminPassword">Admin Password</label>
+                    <input type="password" id="adminPassword" required placeholder="Enter admin password">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Login</button>
+                    <button type="button" class="btn-secondary" id="cancelAdminLogin">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <span class="close admin-close">&times;</span>
+            <h2>Admin Panel</h2>
+            <div class="admin-status">
+                <p>Logged in as: <strong id="adminUserDisplay">Administrator</strong></p>
+                <button class="btn-secondary btn-sm" id="logoutAdminBtn">Logout</button>
+            </div>
+            <div class="admin-section">
+                <h3>Schedule Settings</h3>
+                <div class="form-group">
+                    <label for="startHour">Start Hour (24h format)</label>
+                    <input type="number" id="startHour" min="0" max="23" value="8">
+                </div>
+                <div class="form-group">
+                    <label for="endHour">End Hour (24h format)</label>
+                    <input type="number" id="endHour" min="1" max="24" value="18">
+                </div>
+                <button class="btn-primary" id="updateScheduleBtn">Update Schedule</button>
+            </div>
+
+            <div class="admin-section">
+                <h3>Manage Bookings</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">View and manage all bookings in the system</p>
+                <button class="btn-primary" id="manageBookingsBtn">Manage All Bookings</button>
+            </div>
+
+            <div class="admin-section">
+                <h3>Data Management</h3>
+                <button class="btn-secondary" id="exportBtn">Export to CSV</button>
+                <button class="btn-danger" id="clearAllBtn">Clear All Bookings</button>
+            </div>
+
+            <div class="admin-section">
+                <h3>Statistics</h3>
+                <div id="adminStats"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Booking Management Modal -->
+    <div id="adminBookingManageModal" class="modal">
+        <div class="modal-content" style="max-width: 95%; max-height: 95vh; overflow-y: auto;">
+            <span class="close admin-booking-close">&times;</span>
+            <h2>Manage All Bookings (Admin Mode)</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">Click on any slot to add, edit, or delete bookings. You have full access to all bookings.</p>
+
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                <div class="week-selector" style="justify-content: center; flex: 1;">
+                    <label>Week:</label>
+                    <button id="adminPrevWeekBtn" class="btn-secondary btn-sm">← Previous</button>
+                    <span id="adminWeekDisplay" style="margin: 0 15px; font-weight: 600; min-width: 120px; display: inline-block; text-align: center;"></span>
+                    <button id="adminNextWeekBtn" class="btn-secondary btn-sm">Next →</button>
+                    <button id="adminTodayBtn" class="btn-primary btn-sm" style="margin-left: 10px;">Today</button>
+                </div>
+                <div style="flex: 0 0 300px;">
+                    <input type="text" id="adminSearchInput" placeholder="Search by teacher name..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+            </div>
+
+            <div class="schedule-container" style="max-height: 60vh;">
+                <div class="schedule-grid" id="adminScheduleGrid">
+                    <!-- Admin schedule grid will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Edit Booking Modal -->
+    <div id="adminEditModal" class="modal">
+        <div class="modal-content">
+            <span class="close admin-edit-close">&times;</span>
+            <h2 id="adminEditTitle">Edit Booking</h2>
+            <form id="adminEditForm">
+                <div class="form-group">
+                    <label for="adminTeacherName">Teacher Name *</label>
+                    <input type="text" id="adminTeacherName" required maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="adminNotes">Notes / Remarks</label>
+                    <textarea id="adminNotes" rows="4" maxlength="500" placeholder="Any additional information..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                    <button type="button" class="btn-secondary" id="adminEditCancelBtn">Cancel</button>
+                    <button type="button" class="btn-danger" id="adminDeleteBtn">Delete Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AWS SDK -->
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1543.0.min.js"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
